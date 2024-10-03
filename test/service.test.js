@@ -1,11 +1,10 @@
-const express = require("express");
 const request = require("supertest");
 const app = require("../src/service");
 
 // Mocking the required routers and middleware
 jest.mock("../src/routes/authRouter.js", () => ({
-  authRouter: require("express").Router(), // Move the require inside the mock function
-  setAuthUser: jest.fn((req, res, next) => next()), // Mock setAuthUser middleware
+  authRouter: require("express").Router(),
+  setAuthUser: jest.fn((req, res, next) => next()),
 }));
 jest.mock("../src/routes/orderRouter.js", () => require("express").Router());
 jest.mock("../src/routes/franchiseRouter.js", () =>
