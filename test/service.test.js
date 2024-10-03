@@ -1,7 +1,12 @@
 const request = require("supertest");
 const app = require("../src/service.js");
+const db = require("../src/database.js"); // assuming this is where your database connection is
 
 describe("GET /", () => {
+  afterAll(async () => {
+    await db.close(); // close the database connection after all tests have run
+  });
+
   it("responds with a welcome message and the version", async () => {
     const response = await request(app).get("/");
     expect(response.statusCode).toBe(200);
