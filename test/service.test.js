@@ -1,18 +1,33 @@
+const express = require("express");
 const request = require("supertest");
-const app = require("../src/service.js");
-const db = require("../src/database.js"); // assuming this is where your database connection is
+const app = require("../src/service");
 
-describe("GET /", () => {
-  afterAll(async () => {
-    await db.close(); // close the database connection after all tests have run
-  });
+// Mocking the required routers and middleware
+jest.mock("../src/routes/authRouter.js", () => ({
+  authRouter: require("express").Router(), // Move the require inside the mock function
+  setAuthUser: jest.fn((req, res, next) => next()), // Mock setAuthUser middleware
+}));
+jest.mock("../src/routes/orderRouter.js", () => require("express").Router());
+jest.mock("../src/routes/franchiseRouter.js", () =>
+  require("express").Router()
+);
+jest.mock("../src/version.json", () => ({ version: "1.0.0" }));
+jest.mock("../src/config.js", () => ({
+  factory: { url: "https://pizza.smittywerb.click/" },
+  db: { connection: { host: "127.0.0.1" } },
+}));
 
-  it("responds with a welcome message and the version", async () => {
+describe("Test API routes", () => {
+  test("GET / should return welcome message", async () => {
     const response = await request(app).get("/");
     expect(response.statusCode).toBe(200);
-    expect(response.body).toHaveProperty("message");
     expect(response.body.message).toBe("welcome to JWT Pizza");
-    expect(response.body).toHaveProperty("version");
-    expect(response.body.version).toBe("20240518.154317");
+    expect(response.body.version).toBe("1.0.0");
+  });
+
+  test("GET /unknown should return 404", async () => {
+    const response = await request(app).get("/unknown");
+    expect(response.statusCode).toBe(404);
+    expect(response.body.message).toBe("unknown endpoint");
   });
 });
