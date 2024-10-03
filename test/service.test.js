@@ -15,6 +15,16 @@ jest.mock("../src/config.js", () => ({
   factory: { url: "https://pizza.smittywerb.click/" },
   db: { connection: { host: "127.0.0.1" } },
 }));
+jest.mock("../src/routes/authRouter.js", () => {
+  const router = require("express").Router();
+  router.get("/error", (req, res, next) => {
+    next(new Error("Test error"));
+  });
+  return {
+    authRouter: router,
+    setAuthUser: jest.fn((req, res, next) => next()),
+  };
+});
 
 describe("Test API routes", () => {
   test("GET / should return welcome message", async () => {
@@ -28,5 +38,10 @@ describe("Test API routes", () => {
     const response = await request(app).get("/unknown");
     expect(response.statusCode).toBe(404);
     expect(response.body.message).toBe("unknown endpoint");
+  });
+
+  test("GET /api/auth/error should return 500", async () => {
+    const response = await request(app).get("/api/auth/error");
+    expect(response.statusCode).toBe(500);
   });
 });
