@@ -10,8 +10,6 @@ jest.mock("../src/database/database.js", () => {
   };
 });
 
-const dbModel = require("../src/database/database.js");
-
 describe("GET /", () => {
   it("responds with welcome message", async () => {
     const response = await request(app).get("/");
