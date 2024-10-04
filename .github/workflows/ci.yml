@@ -55,7 +55,7 @@ jobs:
               listPerPage: 10,
             },
             factory: {
-              url: 'https://pizza.smittywerb.click/',
+              url: 'https://pizza-factory.cs329.click',
               apiKey: '${{ secrets.FACTORY_API_KEY }}',
             },
           };" > src/config.js
@@ -69,6 +69,11 @@ jobs:
           version=$(date +'%Y%m%d.%H%M%S')
           echo "version=$version" >> "$GITHUB_OUTPUT"
           printf '{"version": "%s" }' "$version" > src/version.json
+
+      - name: Output coverage percentage
+        run: |
+          coverage_pct=$(grep -o '"pct":[0-9.]*' coverage/coverage-summary.json | head -n 1 | cut -d ':' -f 2)
+          echo "Coverage percentage: $coverage_pct"
 
       - name: Update coverage
         run: |
