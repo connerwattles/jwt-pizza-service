@@ -21,6 +21,9 @@ test("get the pizza menu", async () => {
 });
 
 test("add a menu item", async () => {
+  let adminUser;
+  let adminUserAuthToken;
+
   const menuItem = {
     title: "Student",
     description: "No topping, no sauce, just carbs",

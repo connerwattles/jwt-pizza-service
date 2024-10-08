@@ -63,6 +63,8 @@ test("create and delete a franchise", async () => {
 });
 
 test("create and delete a franchise store", async () => {
+  let franchiseStoreId;
+
   adminUser = await createAdminUser();
   const loginRes = await request(app).put("/api/auth").send(adminUser);
   adminUserAuthToken = loginRes.body.token;
