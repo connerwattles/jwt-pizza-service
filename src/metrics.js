@@ -70,6 +70,8 @@ class Metrics {
     const metric =
       "metric=" +
       metricPrefix +
+      ",source=" +
+      config.metrics.source +
       ",method=" +
       method +
       " " +
