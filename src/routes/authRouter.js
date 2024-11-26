@@ -8,6 +8,8 @@ const { metrics } = require("../metrics.js");
 
 const authRouter = express.Router();
 
+const logger = require("../logger.js");
+
 authRouter.endpoints = [
   {
     method: "POST",
@@ -93,17 +95,29 @@ authRouter.post(
   asyncHandler(async (req, res) => {
     const { name, email, password } = req.body;
     if (!name || !email || !password) {
+      logger.log("warn", "auth", {
+        event: "registration_failed",
+        reason: "missing_fields",
+        body: req.body,
+      });
       return res
         .status(400)
         .json({ message: "name, email, and password are required" });
     }
+
     const user = await DB.addUser({
       name,
       email,
       password,
       roles: [{ role: Role.Diner }],
     });
+
     const auth = await setAuth(user);
+    logger.log("info", "auth", {
+      event: "user_registered",
+      userId: user.id,
+      email,
+    });
     res.json({ user: user, token: auth });
   })
 );
@@ -114,12 +128,19 @@ authRouter.put(
   asyncHandler(async (req, res) => {
     const { email, password } = req.body;
     const user = await DB.getUser(email, password);
+
     if (user) {
       const auth = await setAuth(user);
       metrics.incrementActiveUsers();
+      logger.log("info", "auth", {
+        event: "login_success",
+        userId: user.id,
+        email,
+      });
       res.json({ user: user, token: auth });
     } else {
       metrics.incrementAuth(false);
+      logger.log("warn", "auth", { event: "login_failed", email });
       res.status(401).json({ message: "Invalid credentials" });
     }
   })
@@ -131,11 +152,20 @@ authRouter.delete(
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     const token = readAuthToken(req);
+
     if (token) {
       await clearAuth(req);
       metrics.decrementActiveUsers();
+      logger.log("info", "auth", {
+        event: "logout_success",
+        userId: req.user.id,
+      });
       res.json({ message: "logout successful" });
     } else {
+      logger.log("warn", "auth", {
+        event: "logout_failed",
+        reason: "no_token_provided",
+      });
       res.status(400).json({ message: "No token provided" });
     }
   })
@@ -149,13 +179,24 @@ authRouter.put(
     const { email, password } = req.body;
     const userId = Number(req.params.userId);
     const user = req.user;
+
     if (user.id !== userId && !user.isRole(Role.Admin)) {
       metrics.incrementAuth(false);
+      logger.log("warn", "auth", {
+        event: "update_user_unauthorized",
+        userId,
+        requesterId: user.id,
+      });
       return res.status(403).json({ message: "unauthorized" });
     }
 
     metrics.incrementAuth(true);
     const updatedUser = await DB.updateUser(userId, email, password);
+    logger.log("info", "auth", {
+      event: "user_updated",
+      userId,
+      updatedFields: { email },
+    });
     res.json(updatedUser);
   })
 );

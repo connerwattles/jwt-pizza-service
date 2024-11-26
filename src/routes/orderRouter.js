@@ -8,6 +8,8 @@ const { metrics } = require("../metrics.js");
 
 const orderRouter = express.Router();
 
+const logger = require("../logger.js");
+
 orderRouter.endpoints = [
   {
     method: "GET",
@@ -82,7 +84,9 @@ orderRouter.endpoints = [
 orderRouter.get(
   "/menu",
   asyncHandler(async (req, res) => {
-    res.send(await DB.getMenu());
+    const menu = await DB.getMenu();
+    logger.log("info", "order", { event: "get_menu", count: menu.length });
+    res.send(menu);
   })
 );
 
@@ -92,12 +96,22 @@ orderRouter.put(
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     if (!req.user.isRole(Role.Admin)) {
+      logger.log("warn", "order", {
+        event: "add_menu_item_unauthorized",
+        userId: req.user.id,
+      });
       throw new StatusCodeError("unable to add menu item", 403);
     }
 
     const addMenuItemReq = req.body;
     await DB.addMenuItem(addMenuItemReq);
-    res.send(await DB.getMenu());
+    const menu = await DB.getMenu();
+    logger.log("info", "order", {
+      event: "menu_item_added",
+      userId: req.user.id,
+      menuItem: addMenuItemReq,
+    });
+    res.send(menu);
   })
 );
 
@@ -106,7 +120,15 @@ orderRouter.get(
   "/",
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
-    res.json(await DB.getOrders(req.user, req.query.page));
+    const page = req.query.page || 1;
+    const orders = await DB.getOrders(req.user, page);
+    logger.log("info", "order", {
+      event: "get_orders",
+      userId: req.user.id,
+      page,
+      count: orders.length,
+    });
+    res.json(orders);
   })
 );
 
@@ -118,6 +140,12 @@ orderRouter.post(
     const orderReq = req.body;
     const startTime = Date.now();
     const order = await DB.addDinerOrder(req.user, orderReq);
+
+    logger.log("info", "order", {
+      event: "order_created",
+      userId: req.user.id,
+      order,
+    });
 
     try {
       const r = await fetch(`${config.factory.url}/api/order`, {
@@ -154,9 +182,23 @@ orderRouter.post(
           latency
         );
 
+        logger.log("info", "order", {
+          event: "order_fulfilled",
+          userId: req.user.id,
+          orderId: order.id,
+          latency,
+          totalRevenue,
+        });
+
         res.send({ order, jwt: j.jwt, reportUrl: j.reportUrl });
       } else {
         metrics.recordPizzaFailure();
+        logger.log("error", "order", {
+          event: "factory_fulfillment_failed",
+          userId: req.user.id,
+          orderId: order.id,
+          factoryResponse: j,
+        });
         res.status(500).send({
           message: "Failed to fulfill order at factory",
           reportUrl: j.reportUrl,
@@ -164,7 +206,12 @@ orderRouter.post(
       }
     } catch (err) {
       metrics.recordPizzaFailure();
-      console.error(err);
+      logger.log("error", "order", {
+        event: "factory_service_error",
+        error: err.message,
+        userId: req.user.id,
+        orderId: order.id,
+      });
       res.status(500).send({ message: "Internal Server Error" });
     }
   })

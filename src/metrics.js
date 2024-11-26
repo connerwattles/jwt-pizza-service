@@ -88,13 +88,13 @@ class Metrics {
     })
       .then((response) => {
         if (!response.ok) {
-          console.error("Failed to push metrics data to Grafana");
+          //console.error("Failed to push metrics data to Grafana");
         } else {
-          console.log(`Pushed ${metric}`);
+          //console.log(`Pushed ${metric}`);
         }
       })
       .catch((error) => {
-        console.error("Error pushing metrics:", error);
+        //console.error("Error pushing metrics:", error);
       });
   }
 
@@ -111,9 +111,9 @@ class Metrics {
   }
 
   sendAuthMetrics() {
-    console.log(
-      `Sending auth metrics: success=${this.authAttempts.success}, failure=${this.authAttempts.failure}`
-    );
+    // console.log(
+    //   `Sending auth metrics: success=${this.authAttempts.success}, failure=${this.authAttempts.failure}`
+    // );
     this.sendMetricToGrafana(
       "auth",
       "success",
@@ -152,7 +152,7 @@ class Metrics {
   }
 
   sendActiveUserMetrics() {
-    console.log(`Active users: ${this.activeUsers}`);
+    //console.log(`Active users: ${this.activeUsers}`);
     this.sendMetricToGrafana("user", "active", "count", this.activeUsers);
   }
 
